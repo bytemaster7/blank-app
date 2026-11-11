@@ -14,3 +14,5 @@ Answers to clarifying questions. Where the owner said "pick the industry standar
 | 8 | PPI and wire sizes | PPI is always per inch. Wire sizes offered from the inch dropdowns and shown in mm as well. | Industry convention. | Phase 2 |
 | 9 | Pull-wire angular positions | Single wire at +Y; two at ±Y; four at ±X and ±Y. | Matches spec 5.3 (0° azimuth = +Y bend). | Phase 2 |
 | 10 | Blend tool timing | Built in Phase 1 with the Materials tab, tested against 10.12 first. | It is part of spec 5.9. | Phase 1 |
+| 11 | Look and feel; how the app is opened | Material Design styling. Each phase also produces `release/CathSim.html`, a single file opened by double-click — no Node.js, no server, no internet. | Owner's request; keeps the "fully offline, no cloud" rule. | Phase 2 |
+| 12 | Pull-wire lumen shape | Follows the wire: round wire → round lumen, flat wire → flat lumen. | Usual practice; one less thing to keep consistent. | Phase 2 |

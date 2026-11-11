@@ -4,7 +4,11 @@ A personal catheter design & simulation workbench. Runs entirely on your own com
 
 > Screening estimates from simplified mechanics. Not a substitute for bench testing or V&V.
 
-## Running it
+## Using it (no installation)
+
+Download **`release/CathSim.html`** and double-click it. It opens in Chrome or Edge and works with no internet connection. Your work autosaves in that browser; use **Save Design** to keep a file you can email or back up.
+
+## Running it from the source (only needed to change the code or run the checks)
 
 You need [Node.js](https://nodejs.org) version 20 or newer (install the "LTS" version once).
 

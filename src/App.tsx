@@ -1,9 +1,6 @@
-import { useState } from "react";
 import { TABS, useApp, type TabName } from "./state/store";
-import { parseDesignFile, serializeDesign } from "./model/io";
-import { combineLibraries } from "./model/materials";
-import { validateDesign } from "./model/design";
-import { downloadText, pickTextFile, safeFilename } from "./ui/files";
+import { loadDesignFromFile, saveDesignToFile } from "./ui/designFile";
+import { Icon } from "./ui/components/Icon";
 import { MaterialsTab } from "./ui/tabs/MaterialsTab";
 import { SetupTab } from "./ui/tabs/SetupTab";
 
@@ -20,42 +17,25 @@ const PHASE: Partial<Record<TabName, number>> = {
 };
 
 export function App() {
-  const { tab, setTab, design, materials, modelBuilt, setUnits, replaceDesign, setMaterials } = useApp();
-  const [notice, setNotice] = useState<{ kind: "error" | "ok"; lines: string[] } | null>(null);
-
-  const saveDesign = () => downloadText(`${safeFilename(design.name)}.cathsim.json`, serializeDesign(design, materials));
-
-  const loadDesign = async () => {
-    const text = await pickTextFile();
-    if (text === undefined) return;
-    const parsed = parseDesignFile(text);
-    if (!parsed.ok) return setNotice({ kind: "error", lines: ["Could not load the design — nothing was changed.", ...parsed.errors] });
-    // Bring in any materials the file carries that this library does not have yet (matched by id).
-    const have = new Set(materials.map((m) => m.id));
-    const missing = parsed.value.materials.filter((m) => !have.has(m.id));
-    const nextMaterials = missing.length ? combineLibraries(materials, missing) : materials;
-    const problems = validateDesign(parsed.value.design, nextMaterials);
-    if (missing.length) setMaterials(nextMaterials);
-    replaceDesign(parsed.value.design);
-    setNotice({
-      kind: problems.length ? "error" : "ok",
-      lines: [
-        `Loaded “${parsed.value.design.name}”.` + (missing.length ? ` Added ${missing.length} material(s) from the file to the library.` : ""),
-        ...problems,
-      ],
-    });
-  };
+  const { tab, setTab, design, modelBuilt, setUnits, notice, setNotice } = useApp();
 
   return (
     <div className="app">
       <header>
-        <div className="brand">CathSim</div>
+        <div className="brand">
+          <span className="logo" />
+          CathSim
+        </div>
         <div className="design-name" title="Current design">
           {design.name}
         </div>
         <span className="spacer" />
-        <button onClick={saveDesign}>Save Design</button>
-        <button onClick={loadDesign}>Load Design</button>
+        <button onClick={saveDesignToFile}>
+          <Icon name="save" /> Save Design
+        </button>
+        <button onClick={loadDesignFromFile}>
+          <Icon name="open" /> Load Design
+        </button>
         <div className="segmented" role="group" aria-label="Units">
           <button className={design.units === "mm" ? "on" : ""} onClick={() => setUnits("mm")} title="mm · N · MPa · g/cm³">
             mm
@@ -82,7 +62,7 @@ export function App() {
             ))}
           </div>
           <button className="icon" onClick={() => setNotice(null)} aria-label="Dismiss">
-            ✕
+            <Icon name="close" />
           </button>
         </div>
       )}
@@ -101,7 +81,7 @@ export function App() {
                 </button>
               </>
             ) : (
-              <h2>{tab}</h2>
+              <h2>{NEEDS_MODEL.includes(tab) ? `Model built — ${tab}` : tab}</h2>
             )}
             <p className="muted">This tab is built in Phase {PHASE[tab]}.</p>
           </div>

@@ -4,7 +4,7 @@ Every formula the app implements is listed here in plain engineering notation, w
 
 > **Screening estimates from simplified mechanics. Not a substitute for bench testing or V&V.**
 
-Status: **Phase 1** — conventions, unit conversion and the Materials blend tool are implemented. The calculator formulas (Sections 4.1–4.5, 4.7) are added to this file in Phase 3, when they are implemented and tested.
+Status: **Phase 2** — conventions, unit conversion, the Materials blend tool, the layer-stack geometry and the braid / coil geometry are implemented. The stiffness and failure formulas (Sections 4.1, 4.4, 4.5, 4.7) are added to this file in Phase 3, when they are implemented and tested.
 
 ---
 
@@ -75,3 +75,71 @@ Additive densities (spec, g/cm³): BaSO₄ 4.50 · W 19.3 · Bi₂O₃ 8.90 · b
 ## 4. Material data
 
 Seed values are exactly those in spec Section 6; none were added or altered. Flagged as estimates in the library (amber **est** tag): every crease strain, and the yield strength of 304V spring temper, Nitinol (upper plateau) and tungsten wire. Blend-tool results are saved with every property flagged as an estimate.
+
+## 5. Braid and coil geometry (spec 4.3)
+
+Code: `src/physics/braid.ts`. Tests: `src/physics/geometry.test.ts` (hand calculation 10.3).
+
+Symbols: Dm = mean diameter, N = number of **loaded** wire ends, f = filars per carrier, w = wire width (diameter for round wire), t_w = wire thickness, α = angle from the tube axis.
+
+### 5.1 Braid
+
+| Quantity | Formula | Assumption / validity |
+|---|---|---|
+| Mean diameter | `Dm = seat diameter (layer ID) + t_w` | As specified. See the note below. |
+| Lay length | `L_lay = N / (2·PPI)` inches, × 25.4 for mm | One pick = one crossing along a line parallel to the axis; each helix direction carries N/2 ends. |
+| Braid angle | `tan α = π·Dm / L_lay` | Wires follow true helices on a round mandrel. |
+| Fill factor (one family) | `F = w·f·N / (2π·Dm·cos α)` | Wires lie flat, side by side, no overlap within a family. |
+| Coverage | `C = 1 − (1 − F)²`, clamped to 0–1 | Ko & Pastore; two independent families. |
+| Jamming limit | `cos α_jam = w·f·N / (2π·Dm)`; `L_lay,jam = π·Dm / tan α_jam`; `PPI_max = N / (2·L_lay,jam)` | F = 1. If the right-hand side ≥ 1 the wires cannot fit even at 0° — reported as an error. |
+
+Density bands on F: below 0.70 OK · 0.70–0.85 High density (process limit) · 0.85–1.0 Near binding · 1.0 and above Binding likely.
+
+The PPI input is capped at PPI_max (rounded down to 0.1). If the diameter or wire is changed afterwards so that the existing PPI exceeds the new limit, the section shows an error instead of silently changing your PPI.
+
+Pattern: diamond = 1-over-1, full load = 2-over-2, half load = diamond geometry with N = the ends actually loaded. The pattern changes only the preview drawing and the ride-over rule (6.2).
+
+**Note on Dm (not a change — implemented as written).** `Dm = layer ID + t_w` is the centreline of the inner wire course. The mid-wall of the 2·t_w braid layer would be `layer ID + 2·t_w`. For 0.001" wire on a 2 mm seat the difference is 1.2% on diameter and about 0.3° on braid angle. Test 10.3 fixes the definition as ID + t_w, so that is what the code uses. Tell me if you would rather use the mid-wall.
+
+**Check (test 10.3):** 16 ends, 1 filar, 0.001" × 0.003" flat wire, 60 PPI, seated on 2.000 mm → Dm = 2.0254 mm, L_lay = 3.387 mm, α = 62.0°, F = 0.204, C = 0.366, PPI_max = 332.
+
+### 5.2 Coil
+
+| Quantity | Formula | Assumption / validity |
+|---|---|---|
+| Mean diameter | `Dm = seat diameter + t_w` | Exact mid-wall for a one-wire-thick layer. |
+| Lead | `lead = pitch × starts` | Pitch = measured centre-to-centre spacing of adjacent bands. |
+| Coil angle | `tan α = π·Dm / lead` | From the axis, so a tight coil is close to 90°. |
+| Coverage | `C_coil = w·filars / pitch` | 1.0 = closed pitch. Pitch below `w × filars` is refused. |
+
+## 6. Layer stack (spec 3, 4.2)
+
+Code: `src/physics/geometry.ts`.
+
+### 6.1 Diameters by design mode
+
+- **Fixed ID:** section ID = mandrel diameter; each layer's OD = its ID + 2 × thickness, stacked outward.
+- **Fixed OD:** section OD is fixed; layers are stacked inward.
+- **Fixed OD and ID:** layers inside the adaptive layer stack outward from the ID, layers outside it stack inward from the OD, and the adaptive layer takes what is left. Zero or negative → error.
+
+### 6.2 Computed thicknesses (never typed in)
+
+| Layer | Thickness |
+|---|---|
+| Braid | `2·t_w`, plus `0.10·t_w` ride-over allowance only when F > 0.85 **and** the pattern is 2-over-2 |
+| Triaxial braid | `2·t_w,bias + t_w,axial` (same ride-over rule on the bias wires) |
+| Coil | `t_w` (filars sit side by side) |
+| Pull-wire layer | `lumen bore + 2 × lumen liner wall` |
+
+### 6.3 Pull-wire lumens
+
+- The "Pullwires" layer is a ring whose thickness is the lumen's outer size. It is inserted directly over the liner by default (braid over the lumens, `docs/DECISIONS.md` #2) and can be moved.
+- Lumen centre radius = pull-wire moment arm: `r_pw = (ring ID + ring OD) / 4` (mid-radius of the ring).
+- Angular positions: 1 wire at +Y (90°); 2 wires at ±Y; 4 wires at ±X and ±Y.
+- Sections distal of the anchor carry no lumens.
+- Minimum lumen: wire size + 0.025 mm on each dimension. The lumen takes the wire's shape (round wire → round lumen; flat wire → flat lumen, thickness radial, width tangential).
+- "Within the wall" check: the lumen with its liner must not reach inside the section ID or outside the section OD (for a flat lumen the outer corners are checked).
+
+### 6.4 Matrix of a reinforcement layer
+
+The polymer that fills a braid, coil or pull-wire layer is the nearest polymer layer **outside** it (spec 4.4). It is shown in the layer editor now and used by the stiffness formulas from Phase 3.

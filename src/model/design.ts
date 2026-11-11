@@ -22,7 +22,7 @@ export function createDefaultDesign(): Design {
       {
         id: sectionId,
         label: "Section 1",
-        color: "#4f8fd0",
+        color: "#4285f4",
         length: 100,
         mode: "layered",
         useCore: false,

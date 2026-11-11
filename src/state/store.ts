@@ -47,6 +47,19 @@ interface AppState {
   updateDesign: (patch: Partial<Design>) => void;
   replaceDesign: (design: Design) => void;
   setMaterials: (materials: Material[]) => void;
+  /** Applies a pure edit to the design; any edit un-builds the model. */
+  edit: (fn: (d: Design) => Design) => void;
+  /** Setup wizard step: "design", a section id (Construction), or "review". */
+  step: string;
+  setStep: (step: string) => void;
+  buildModel: () => void;
+  notice: Notice | null;
+  setNotice: (n: Notice | null) => void;
+}
+
+export interface Notice {
+  kind: "error" | "ok";
+  lines: string[];
 }
 
 const saved = loadAutosave();
@@ -60,8 +73,14 @@ export const useApp = create<AppState>((set) => ({
   // Display only: nothing is recomputed, stored values are untouched.
   setUnits: (units) => set((s) => ({ design: { ...s.design, units } })),
   updateDesign: (patch) => set((s) => ({ design: { ...s.design, ...patch }, modelBuilt: false })),
-  replaceDesign: (design) => set({ design, modelBuilt: false }),
+  replaceDesign: (design) => set({ design, modelBuilt: false, step: "design" }),
   setMaterials: (materials) => set({ materials }),
+  edit: (fn) => set((s) => ({ design: fn(s.design), modelBuilt: false })),
+  step: "design",
+  setStep: (step) => set({ step, tab: "Setup" }),
+  buildModel: () => set({ modelBuilt: true, tab: "Analysis" }),
+  notice: null,
+  setNotice: (notice) => set({ notice }),
 }));
 
 // Autosave to localStorage on every change.
