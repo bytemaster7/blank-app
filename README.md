@@ -1,19 +1,30 @@
-# 🎈 Blank app template
+# CathSim
 
-A simple Streamlit app template for you to modify!
+A personal catheter design & simulation workbench. Runs entirely on your own computer in a web browser — no cloud, no accounts.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+> Screening estimates from simplified mechanics. Not a substitute for bench testing or V&V.
 
-### How to run it on your own machine
+## Running it
 
-1. Install the requirements
+You need [Node.js](https://nodejs.org) version 20 or newer (install the "LTS" version once).
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+Open a terminal in this folder and run:
 
-2. Run the app
+```
+npm install      (first time only — needs internet once)
+npm run dev      (starts the app and opens it in your browser)
+```
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+To stop the app, press `Ctrl + C` in the terminal.
+
+To run the calculation checks: `npm test`
+
+## Where things are
+
+| File | What it is |
+|---|---|
+| `docs/SPEC.md` | The full specification |
+| `PHYSICS.md` | Every formula the app uses, with assumptions and validity |
+| `CHANGELOG.md` | What each phase added |
+| `docs/DECISIONS.md` | Design decisions and why |
+| `src/physics/` | The calculations (pure functions, each with tests) |
